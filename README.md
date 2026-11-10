@@ -28,8 +28,8 @@ Chronic diseases — diabetes, hypertension, obesity, COPD, stroke — don't str
 
 ```
 CDC PLACES 2024 Dataset (~73,000 census tracts)
-           |
-           v
+           │
+           ▼
   ┌─────────────────────────────────────────┐
   │  PHASE 1 — Regression Modeling          │
   │  • 10 chronic disease targets           │
@@ -38,8 +38,8 @@ CDC PLACES 2024 Dataset (~73,000 census tracts)
   │  • Gradient Boosting (GridSearchCV)     │
   │  • Feature importance + validation      │
   └─────────────────────────────────────────┘
-           |
-           v
+           │
+           ▼
   ┌─────────────────────────────────────────┐
   │  PHASE 2 — Chronic Health Risk Index    │
   │  • PyTorch neural network (10→32→16→1)  │
@@ -51,19 +51,121 @@ CDC PLACES 2024 Dataset (~73,000 census tracts)
 
 ---
 
-## Key Results
+## Results
 
-| Model | Avg Test R² | Strength |
+### Random Forest — Train vs Test R²
+![RF R² Scores](reports/images/rf_train_test_r2.png)
+
+### Model Comparison Heatmap — Test R² Across All 10 Diseases
+![Heatmap R²](reports/images/heatmap_test_r2.png)
+
+### Random Forest — Train vs Test RMSE
+![RF RMSE](reports/images/rf_train_test_rmse.png)
+
+### Correlation Validation — Diabetes Predictors
+![Diabetes Correlation](reports/images/corr_diabetes_crudeprev.png)
+
+---
+
+## Code Highlights
+
+### Phase 1 — Per-Disease Tuned Random Forest with GridSearchCV
+
+```python
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.model_selection import GridSearchCV
+
+param_grid = {
+    "n_estimators": [150, 250, 350],
+    "max_depth": [8, 12, 16],
+    "min_samples_split": [2, 4, 6],
+    "min_samples_leaf": [1, 2, 3],
+}
+
+rf_best_params = {}
+for disease in target_cols:
+    rf = RandomForestRegressor(random_state=42, n_jobs=-1)
+    grid = GridSearchCV(rf, param_grid, cv=5, scoring="r2", n_jobs=-1)
+    grid.fit(X_scaled, y[disease])
+    rf_best_params[disease] = grid.best_params_
+```
+
+### Phase 2 — PyTorch Neural Network for CHRI
+
+```python
+import torch
+import torch.nn as nn
+
+class CHRI_NN(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.fc1 = nn.Linear(10, 32)
+        self.fc2 = nn.Linear(32, 16)
+        self.fc3 = nn.Linear(16, 1)
+        self.relu = nn.ReLU()
+
+    def forward(self, x):
+        x = self.relu(self.fc1(x))
+        x = self.relu(self.fc2(x))
+        return self.fc3(x)
+
+model = CHRI_NN()
+optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
+criterion = nn.MSELoss()
+```
+
+### CHRI Score — Scale to 0–100 and Classify Risk Tiers
+
+```python
+# Scale NN output to 0–100
+chri_nn = model(X_tensor).detach().numpy().flatten()
+chri_scaled = (chri_nn - chri_nn.min()) / (chri_nn.max() - chri_nn.min()) * 100
+
+df_clean["CHRI"] = chri_scaled
+df_clean["CHRI_Tier"] = pd.cut(
+    df_clean["CHRI"],
+    bins=[0, 33, 66, 100],
+    labels=["low", "medium", "high"]
+)
+```
+
+### Folium Map — Census Tract Risk Visualization
+
+```python
+import folium
+from folium.plugins import MarkerCluster
+
+m = folium.Map(location=[39.5, -98.35], zoom_start=4)
+cluster = MarkerCluster().add_to(m)
+
+def tier_color(t):
+    return "green" if t == "low" else "yellow" if t == "medium" else "red"
+
+for _, row in df_map.iterrows():
+    folium.CircleMarker(
+        location=[row["lat"], row["lon"]],
+        radius=3,
+        color=tier_color(row["CHRI_Tier"]),
+        fill=True
+    ).add_to(cluster)
+```
+
+---
+
+## Key Findings
+
+| Model | Avg Test R² | Notes |
 |---|---|---|
 | Tuned Random Forest | ~0.90+ | Best interpretability, stable across all 10 diseases |
 | Tuned Gradient Boosting | Comparable | Less interpretable, more noise-sensitive |
 
-**Top predictors identified (across diseases):**
-- Self-care disability, smoking, physical inactivity → Diabetes, COPD
-- Preventive care access, checkup rates → Hypertension, Cholesterol
-- Socioeconomic stress indicators → Stroke, CHD
+**Top predictors per disease (Random Forest feature importance):**
+- **Diabetes** → Self-care disability, physical inactivity, obesity
+- **COPD** → Smoking, physical inactivity, lack of preventive care
+- **Hypertension** → Obesity, low checkup rates, socioeconomic stress
+- **Stroke / CHD** → BP medication, smoking, aging population indicators
 
-**CHRI:** Neural network successfully compressed 10 disease dimensions into a single 0–100 risk score. Census tracts classified into Low / Medium / High tiers with high fidelity to underlying disease patterns.
+**CHRI:** Successfully compressed 10 disease dimensions into a single 0–100 risk score. Tracts in the **High** tier showed 2–3× higher prevalence of stroke, COPD, and CHD compared to the **Low** tier.
 
 ---
 
@@ -81,11 +183,10 @@ CDC PLACES 2024 Dataset (~73,000 census tracts)
 
 ## Dataset
 
-Data is sourced from the **CDC PLACES 2024 release** (GIS-friendly format, Census Tract level).
+Data is sourced from the **CDC PLACES 2024 release** (GIS-friendly format, Census Tract level).  
+Download: [CDC PLACES Data Portal](https://www.cdc.gov/places/index.html)
 
-Download it here: [CDC PLACES Data Portal](https://www.cdc.gov/places/index.html)
-
-Place the CSV file in the project root before running the notebook:
+Place the CSV in the project root:
 ```
 PLACES__Census_Tract_Data_(GIS_Friendly_Format),_2024_release_20251010.csv
 ```
@@ -115,21 +216,13 @@ jupyter lab CDC_Chronic_Health_Risk_Model.ipynb
 ```
 cdc-chronic-health-risk/
 ├── CDC_Chronic_Health_Risk_Model.ipynb   # Full two-phase ML pipeline
-├── requirements.txt                      # Python dependencies
+├── requirements.txt
 ├── data/
-│   └── README.md                         # Data download instructions
-├── reports/                              # Output charts and summaries
+│   └── README.md                         # Dataset download instructions
+├── reports/
+│   └── images/                           # Output charts and visualizations
 └── README.md
 ```
-
----
-
-## Research Questions Answered
-
-- **RQ1 — Predictive Strength:** Behavioral and social determinants explain >90% of variance in chronic disease rates (R² > 0.90) using tuned Random Forest models.
-- **RQ2 — Feature Importance:** Identified top predictors per disease; validated against Pearson correlations to confirm medical alignment.
-- **RQ3 — CHRI Construction:** Nonlinear PyTorch NN (10→32→16→1) outperforms linear approaches by capturing co-occurrence and joint risk amplification across diseases.
-- **RQ4 — Risk Classification:** CHRI reliably separates census tracts into Low / Medium / High tiers, confirmed by correlation analysis with individual disease outcomes.
 
 ---
 

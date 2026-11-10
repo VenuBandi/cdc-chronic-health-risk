@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CDC Chronic Health Risk — Interactive U.S. Map</title>
+<script src="https://cdn.jsdelivr.net/npm/plotly.js-dist@2.27.0/plotly.min.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #0d1117; color: #e6edf3; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+  .header { padding: 24px 32px 16px; background: #161b22; border-bottom: 1px solid #30363d; }
+  .header h1 { font-size: 1.4rem; font-weight: 700; color: #58a6ff; margin-bottom: 4px; }
+  .header p { font-size: 0.875rem; color: #8b949e; }
+  .controls { padding: 12px 32px; background: #161b22; border-bottom: 1px solid #30363d; display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+  .controls label { font-size: 0.8rem; color: #8b949e; margin-right: 4px; }
+  select { background: #21262d; color: #e6edf3; border: 1px solid #30363d; border-radius: 6px; padding: 6px 10px; font-size: 0.875rem; cursor: pointer; }
+  select:focus { outline: none; border-color: #58a6ff; }
+  #map { width: 100%; height: calc(100vh - 130px); }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: 600; background: #1f6feb; color: white; margin-left: 8px; vertical-align: middle; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>CDC Chronic Health Risk Index <span class="badge">CDC PLACES 2024</span></h1>
+  <p>Predicted chronic disease prevalence across all U.S. states · Hover to explore · Built with Random Forest + PyTorch CHRI pipeline</p>
+</div>
+
+<div class="controls">
+  <label for="metric">Disease metric:</label>
+  <select id="metric" onchange="updateMap()">
+    <option value="DIABETES_CrudePrev_Predicted">Diabetes</option>
+    <option value="OBESITY_CrudePrev_Predicted">Obesity</option>
+    <option value="BPHIGH_CrudePrev_Predicted">High Blood Pressure</option>
+    <option value="CHD_CrudePrev_Predicted">Coronary Heart Disease</option>
+    <option value="COPD_CrudePrev_Predicted">COPD</option>
+    <option value="STROKE_CrudePrev_Predicted">Stroke</option>
+  </select>
+</div>
+
+<div id="map"></div>
+
+<script>
+const DATA = {"AK": {"DIABETES_CrudePrev_Predicted": 10.77, "OBESITY_CrudePrev_Predicted": 35.39, "BPHIGH_CrudePrev_Predicted": 31.67, "CHD_CrudePrev_Predicted": 7.09, "COPD_CrudePrev_Predicted": 7.62, "STROKE_CrudePrev_Predicted": 3.91}, "AL": {"DIABETES_CrudePrev_Predicted": 17.02, "OBESITY_CrudePrev_Predicted": 41.58, "BPHIGH_CrudePrev_Predicted": 45.03, "CHD_CrudePrev_Predicted": 9.55, "COPD_CrudePrev_Predicted": 10.84, "STROKE_CrudePrev_Predicted": 5.29}, "AR": {"DIABETES_CrudePrev_Predicted": 16.52, "OBESITY_CrudePrev_Predicted": 39.98, "BPHIGH_CrudePrev_Predicted": 43.68, "CHD_CrudePrev_Predicted": 9.9, "COPD_CrudePrev_Predicted": 10.97, "STROKE_CrudePrev_Predicted": 5.06}, "AZ": {"DIABETES_CrudePrev_Predicted": 16.14, "OBESITY_CrudePrev_Predicted": 35.18, "BPHIGH_CrudePrev_Predicted": 36.12, "CHD_CrudePrev_Predicted": 9.8, "COPD_CrudePrev_Predicted": 10.25, "STROKE_CrudePrev_Predicted": 5.29}, "CA": {"DIABETES_CrudePrev_Predicted": 11.85, "OBESITY_CrudePrev_Predicted": 30.43, "BPHIGH_CrudePrev_Predicted": 31.05, "CHD_CrudePrev_Predicted": 6.82, "COPD_CrudePrev_Predicted": 6.91, "STROKE_CrudePrev_Predicted": 3.65}, "CO": {"DIABETES_CrudePrev_Predicted": 10.22, "OBESITY_CrudePrev_Predicted": 27.93, "BPHIGH_CrudePrev_Predicted": 29.55, "CHD_CrudePrev_Predicted": 6.86, "COPD_CrudePrev_Predicted": 7.0, "STROKE_CrudePrev_Predicted": 3.57}, "CT": {"DIABETES_CrudePrev_Predicted": 10.73, "OBESITY_CrudePrev_Predicted": 31.78, "BPHIGH_CrudePrev_Predicted": 31.93, "CHD_CrudePrev_Predicted": 6.52, "COPD_CrudePrev_Predicted": 6.77, "STROKE_CrudePrev_Predicted": 3.42}, "DC": {"DIABETES_CrudePrev_Predicted": 8.75, "OBESITY_CrudePrev_Predicted": 25.99, "BPHIGH_CrudePrev_Predicted": 28.78, "CHD_CrudePrev_Predicted": 4.5, "COPD_CrudePrev_Predicted": 4.94, "STROKE_CrudePrev_Predicted": 3.22}, "DE": {"DIABETES_CrudePrev_Predicted": 12.76, "OBESITY_CrudePrev_Predicted": 37.75, "BPHIGH_CrudePrev_Predicted": 35.93, "CHD_CrudePrev_Predicted": 7.09, "COPD_CrudePrev_Predicted": 7.57, "STROKE_CrudePrev_Predicted": 3.81}, "FL": {"DIABETES_CrudePrev_Predicted": 14.26, "OBESITY_CrudePrev_Predicted": 35.45, "BPHIGH_CrudePrev_Predicted": 33.41, "CHD_CrudePrev_Predicted": 9.57, "COPD_CrudePrev_Predicted": 10.39, "STROKE_CrudePrev_Predicted": 4.8}, "GA": {"DIABETES_CrudePrev_Predicted": 14.62, "OBESITY_CrudePrev_Predicted": 39.85, "BPHIGH_CrudePrev_Predicted": 42.12, "CHD_CrudePrev_Predicted": 8.11, "COPD_CrudePrev_Predicted": 9.66, "STROKE_CrudePrev_Predicted": 4.67}, "HI": {"DIABETES_CrudePrev_Predicted": 12.72, "OBESITY_CrudePrev_Predicted": 26.08, "BPHIGH_CrudePrev_Predicted": 29.89, "CHD_CrudePrev_Predicted": 7.04, "COPD_CrudePrev_Predicted": 6.05, "STROKE_CrudePrev_Predicted": 4.1}, "IA": {"DIABETES_CrudePrev_Predicted": 12.37, "OBESITY_CrudePrev_Predicted": 39.49, "BPHIGH_CrudePrev_Predicted": 33.44, "CHD_CrudePrev_Predicted": 7.75, "COPD_CrudePrev_Predicted": 7.9, "STROKE_CrudePrev_Predicted": 3.92}, "ID": {"DIABETES_CrudePrev_Predicted": 11.35, "OBESITY_CrudePrev_Predicted": 33.5, "BPHIGH_CrudePrev_Predicted": 35.01, "CHD_CrudePrev_Predicted": 7.78, "COPD_CrudePrev_Predicted": 7.72, "STROKE_CrudePrev_Predicted": 3.91}, "IL": {"DIABETES_CrudePrev_Predicted": 12.77, "OBESITY_CrudePrev_Predicted": 37.13, "BPHIGH_CrudePrev_Predicted": 36.52, "CHD_CrudePrev_Predicted": 7.94, "COPD_CrudePrev_Predicted": 8.37, "STROKE_CrudePrev_Predicted": 4.07}, "IN": {"DIABETES_CrudePrev_Predicted": 13.16, "OBESITY_CrudePrev_Predicted": 39.42, "BPHIGH_CrudePrev_Predicted": 37.16, "CHD_CrudePrev_Predicted": 8.25, "COPD_CrudePrev_Predicted": 9.9, "STROKE_CrudePrev_Predicted": 4.02}, "KS": {"DIABETES_CrudePrev_Predicted": 12.83, "OBESITY_CrudePrev_Predicted": 38.92, "BPHIGH_CrudePrev_Predicted": 36.99, "CHD_CrudePrev_Predicted": 7.85, "COPD_CrudePrev_Predicted": 8.14, "STROKE_CrudePrev_Predicted": 3.81}, "KY": {"DIABETES_CrudePrev_Predicted": 14.94, "OBESITY_CrudePrev_Predicted": 40.29, "BPHIGH_CrudePrev_Predicted": 41.33, "CHD_CrudePrev_Predicted": 9.12, "COPD_CrudePrev_Predicted": 12.18, "STROKE_CrudePrev_Predicted": 4.57}, "LA": {"DIABETES_CrudePrev_Predicted": 16.21, "OBESITY_CrudePrev_Predicted": 42.13, "BPHIGH_CrudePrev_Predicted": 42.96, "CHD_CrudePrev_Predicted": 8.46, "COPD_CrudePrev_Predicted": 10.25, "STROKE_CrudePrev_Predicted": 5.12}, "MA": {"DIABETES_CrudePrev_Predicted": 10.04, "OBESITY_CrudePrev_Predicted": 28.68, "BPHIGH_CrudePrev_Predicted": 30.09, "CHD_CrudePrev_Predicted": 7.06, "COPD_CrudePrev_Predicted": 6.55, "STROKE_CrudePrev_Predicted": 3.28}, "MD": {"DIABETES_CrudePrev_Predicted": 12.63, "OBESITY_CrudePrev_Predicted": 35.88, "BPHIGH_CrudePrev_Predicted": 37.29, "CHD_CrudePrev_Predicted": 7.09, "COPD_CrudePrev_Predicted": 7.2, "STROKE_CrudePrev_Predicted": 3.82}, "ME": {"DIABETES_CrudePrev_Predicted": 11.18, "OBESITY_CrudePrev_Predicted": 34.52, "BPHIGH_CrudePrev_Predicted": 34.98, "CHD_CrudePrev_Predicted": 8.72, "COPD_CrudePrev_Predicted": 9.42, "STROKE_CrudePrev_Predicted": 4.07}, "MI": {"DIABETES_CrudePrev_Predicted": 12.42, "OBESITY_CrudePrev_Predicted": 36.84, "BPHIGH_CrudePrev_Predicted": 37.93, "CHD_CrudePrev_Predicted": 8.45, "COPD_CrudePrev_Predicted": 9.9, "STROKE_CrudePrev_Predicted": 4.18}, "MN": {"DIABETES_CrudePrev_Predicted": 11.62, "OBESITY_CrudePrev_Predicted": 38.11, "BPHIGH_CrudePrev_Predicted": 33.89, "CHD_CrudePrev_Predicted": 7.69, "COPD_CrudePrev_Predicted": 7.04, "STROKE_CrudePrev_Predicted": 3.79}, "MO": {"DIABETES_CrudePrev_Predicted": 13.15, "OBESITY_CrudePrev_Predicted": 39.58, "BPHIGH_CrudePrev_Predicted": 38.55, "CHD_CrudePrev_Predicted": 8.86, "COPD_CrudePrev_Predicted": 10.44, "STROKE_CrudePrev_Predicted": 4.42}, "MS": {"DIABETES_CrudePrev_Predicted": 17.27, "OBESITY_CrudePrev_Predicted": 43.77, "BPHIGH_CrudePrev_Predicted": 47.44, "CHD_CrudePrev_Predicted": 9.06, "COPD_CrudePrev_Predicted": 10.8, "STROKE_CrudePrev_Predicted": 5.56}, "MT": {"DIABETES_CrudePrev_Predicted": 10.39, "OBESITY_CrudePrev_Predicted": 32.67, "BPHIGH_CrudePrev_Predicted": 33.65, "CHD_CrudePrev_Predicted": 7.87, "COPD_CrudePrev_Predicted": 7.99, "STROKE_CrudePrev_Predicted": 4.1}, "NC": {"DIABETES_CrudePrev_Predicted": 13.9, "OBESITY_CrudePrev_Predicted": 35.26, "BPHIGH_CrudePrev_Predicted": 39.34, "CHD_CrudePrev_Predicted": 8.44, "COPD_CrudePrev_Predicted": 9.23, "STROKE_CrudePrev_Predicted": 4.65}, "ND": {"DIABETES_CrudePrev_Predicted": 11.05, "OBESITY_CrudePrev_Predicted": 37.29, "BPHIGH_CrudePrev_Predicted": 34.65, "CHD_CrudePrev_Predicted": 7.73, "COPD_CrudePrev_Predicted": 7.43, "STROKE_CrudePrev_Predicted": 3.71}, "NE": {"DIABETES_CrudePrev_Predicted": 12.25, "OBESITY_CrudePrev_Predicted": 39.55, "BPHIGH_CrudePrev_Predicted": 36.11, "CHD_CrudePrev_Predicted": 8.38, "COPD_CrudePrev_Predicted": 7.54, "STROKE_CrudePrev_Predicted": 3.85}, "NH": {"DIABETES_CrudePrev_Predicted": 9.91, "OBESITY_CrudePrev_Predicted": 30.33, "BPHIGH_CrudePrev_Predicted": 31.31, "CHD_CrudePrev_Predicted": 7.17, "COPD_CrudePrev_Predicted": 7.13, "STROKE_CrudePrev_Predicted": 3.31}, "NJ": {"DIABETES_CrudePrev_Predicted": 10.6, "OBESITY_CrudePrev_Predicted": 31.23, "BPHIGH_CrudePrev_Predicted": 31.71, "CHD_CrudePrev_Predicted": 6.33, "COPD_CrudePrev_Predicted": 5.83, "STROKE_CrudePrev_Predicted": 3.3}, "NM": {"DIABETES_CrudePrev_Predicted": 13.89, "OBESITY_CrudePrev_Predicted": 35.15, "BPHIGH_CrudePrev_Predicted": 34.31, "CHD_CrudePrev_Predicted": 8.01, "COPD_CrudePrev_Predicted": 7.82, "STROKE_CrudePrev_Predicted": 4.32}, "NV": {"DIABETES_CrudePrev_Predicted": 12.48, "OBESITY_CrudePrev_Predicted": 34.24, "BPHIGH_CrudePrev_Predicted": 35.61, "CHD_CrudePrev_Predicted": 8.48, "COPD_CrudePrev_Predicted": 9.23, "STROKE_CrudePrev_Predicted": 4.27}, "NY": {"DIABETES_CrudePrev_Predicted": 11.32, "OBESITY_CrudePrev_Predicted": 34.67, "BPHIGH_CrudePrev_Predicted": 34.25, "CHD_CrudePrev_Predicted": 7.56, "COPD_CrudePrev_Predicted": 7.77, "STROKE_CrudePrev_Predicted": 3.76}, "OH": {"DIABETES_CrudePrev_Predicted": 14.41, "OBESITY_CrudePrev_Predicted": 41.19, "BPHIGH_CrudePrev_Predicted": 38.26, "CHD_CrudePrev_Predicted": 9.09, "COPD_CrudePrev_Predicted": 10.81, "STROKE_CrudePrev_Predicted": 4.25}, "OK": {"DIABETES_CrudePrev_Predicted": 15.23, "OBESITY_CrudePrev_Predicted": 42.1, "BPHIGH_CrudePrev_Predicted": 42.0, "CHD_CrudePrev_Predicted": 9.72, "COPD_CrudePrev_Predicted": 10.62, "STROKE_CrudePrev_Predicted": 4.83}, "OR": {"DIABETES_CrudePrev_Predicted": 11.96, "OBESITY_CrudePrev_Predicted": 32.73, "BPHIGH_CrudePrev_Predicted": 34.39, "CHD_CrudePrev_Predicted": 8.4, "COPD_CrudePrev_Predicted": 8.46, "STROKE_CrudePrev_Predicted": 4.16}, "PA": {"DIABETES_CrudePrev_Predicted": 12.14, "OBESITY_CrudePrev_Predicted": 35.68, "BPHIGH_CrudePrev_Predicted": 35.28, "CHD_CrudePrev_Predicted": 8.35, "COPD_CrudePrev_Predicted": 9.04, "STROKE_CrudePrev_Predicted": 4.07}, "RI": {"DIABETES_CrudePrev_Predicted": 10.47, "OBESITY_CrudePrev_Predicted": 28.81, "BPHIGH_CrudePrev_Predicted": 32.32, "CHD_CrudePrev_Predicted": 6.77, "COPD_CrudePrev_Predicted": 6.74, "STROKE_CrudePrev_Predicted": 3.16}, "SC": {"DIABETES_CrudePrev_Predicted": 15.86, "OBESITY_CrudePrev_Predicted": 39.52, "BPHIGH_CrudePrev_Predicted": 43.08, "CHD_CrudePrev_Predicted": 8.15, "COPD_CrudePrev_Predicted": 9.31, "STROKE_CrudePrev_Predicted": 5.1}, "SD": {"DIABETES_CrudePrev_Predicted": 10.42, "OBESITY_CrudePrev_Predicted": 35.73, "BPHIGH_CrudePrev_Predicted": 33.41, "CHD_CrudePrev_Predicted": 7.99, "COPD_CrudePrev_Predicted": 7.17, "STROKE_CrudePrev_Predicted": 3.79}, "TN": {"DIABETES_CrudePrev_Predicted": 15.34, "OBESITY_CrudePrev_Predicted": 39.24, "BPHIGH_CrudePrev_Predicted": 40.92, "CHD_CrudePrev_Predicted": 8.9, "COPD_CrudePrev_Predicted": 11.6, "STROKE_CrudePrev_Predicted": 4.55}, "TX": {"DIABETES_CrudePrev_Predicted": 15.84, "OBESITY_CrudePrev_Predicted": 39.06, "BPHIGH_CrudePrev_Predicted": 37.92, "CHD_CrudePrev_Predicted": 8.64, "COPD_CrudePrev_Predicted": 8.93, "STROKE_CrudePrev_Predicted": 4.32}, "UT": {"DIABETES_CrudePrev_Predicted": 10.32, "OBESITY_CrudePrev_Predicted": 31.96, "BPHIGH_CrudePrev_Predicted": 29.91, "CHD_CrudePrev_Predicted": 6.24, "COPD_CrudePrev_Predicted": 6.12, "STROKE_CrudePrev_Predicted": 3.24}, "VA": {"DIABETES_CrudePrev_Predicted": 14.51, "OBESITY_CrudePrev_Predicted": 38.0, "BPHIGH_CrudePrev_Predicted": 38.65, "CHD_CrudePrev_Predicted": 7.82, "COPD_CrudePrev_Predicted": 8.94, "STROKE_CrudePrev_Predicted": 4.28}, "VT": {"DIABETES_CrudePrev_Predicted": 8.95, "OBESITY_CrudePrev_Predicted": 27.84, "BPHIGH_CrudePrev_Predicted": 31.79, "CHD_CrudePrev_Predicted": 7.35, "COPD_CrudePrev_Predicted": 7.29, "STROKE_CrudePrev_Predicted": 3.56}, "WA": {"DIABETES_CrudePrev_Predicted": 11.55, "OBESITY_CrudePrev_Predicted": 34.76, "BPHIGH_CrudePrev_Predicted": 33.58, "CHD_CrudePrev_Predicted": 7.4, "COPD_CrudePrev_Predicted": 7.46, "STROKE_CrudePrev_Predicted": 3.92}, "WI": {"DIABETES_CrudePrev_Predicted": 11.32, "OBESITY_CrudePrev_Predicted": 38.62, "BPHIGH_CrudePrev_Predicted": 33.79, "CHD_CrudePrev_Predicted": 7.75, "COPD_CrudePrev_Predicted": 7.58, "STROKE_CrudePrev_Predicted": 3.78}, "WV": {"DIABETES_CrudePrev_Predicted": 16.73, "OBESITY_CrudePrev_Predicted": 41.28, "BPHIGH_CrudePrev_Predicted": 44.0, "CHD_CrudePrev_Predicted": 10.09, "COPD_CrudePrev_Predicted": 13.22, "STROKE_CrudePrev_Predicted": 4.8}, "WY": {"DIABETES_CrudePrev_Predicted": 10.29, "OBESITY_CrudePrev_Predicted": 33.46, "BPHIGH_CrudePrev_Predicted": 31.15, "CHD_CrudePrev_Predicted": 6.94, "COPD_CrudePrev_Predicted": 7.57, "STROKE_CrudePrev_Predicted": 3.45}};
+
+const labels = {
+  DIABETES_CrudePrev_Predicted: 'Diabetes Prevalence (%)',
+  OBESITY_CrudePrev_Predicted: 'Obesity Prevalence (%)',
+  BPHIGH_CrudePrev_Predicted: 'High Blood Pressure (%)',
+  CHD_CrudePrev_Predicted: 'Coronary Heart Disease (%)',
+  COPD_CrudePrev_Predicted: 'COPD Prevalence (%)',
+  STROKE_CrudePrev_Predicted: 'Stroke Prevalence (%)'
+};
+
+function updateMap() {
+  const metric = document.getElementById('metric').value;
+  const states = Object.keys(DATA);
+  const values = states.map(s => DATA[s][metric] || null);
+
+  const hoverText = states.map(s => {
+    const d = DATA[s];
+    return `<b>${s}</b><br>` +
+      `Diabetes: ${d.DIABETES_CrudePrev_Predicted}%<br>` +
+      `Obesity: ${d.OBESITY_CrudePrev_Predicted}%<br>` +
+      `Hypertension: ${d.BPHIGH_CrudePrev_Predicted}%<br>` +
+      `CHD: ${d.CHD_CrudePrev_Predicted}%<br>` +
+      `COPD: ${d.COPD_CrudePrev_Predicted}%<br>` +
+      `Stroke: ${d.STROKE_CrudePrev_Predicted}%`;
+  });
+
+  const trace = {
+    type: 'choropleth',
+    locationmode: 'USA-states',
+    locations: states,
+    z: values,
+    text: hoverText,
+    hoverinfo: 'text',
+    colorscale: [
+      [0, '#1a9850'], [0.25, '#91cf60'], [0.5, '#fee08b'],
+      [0.75, '#fc8d59'], [1, '#d73027']
+    ],
+    colorbar: {
+      title: { text: labels[metric], font: { color: '#e6edf3', size: 12 } },
+      tickfont: { color: '#e6edf3' },
+      bgcolor: '#161b22',
+      bordercolor: '#30363d'
+    },
+    marker: { line: { color: '#30363d', width: 1 } }
+  };
+
+  const layout = {
+    geo: {
+      scope: 'usa',
+      showlakes: true,
+      lakecolor: '#0d1117',
+      bgcolor: '#0d1117',
+      landcolor: '#21262d',
+      showland: true,
+      countrycolor: '#30363d',
+      coastlinecolor: '#30363d'
+    },
+    paper_bgcolor: '#0d1117',
+    plot_bgcolor: '#0d1117',
+    margin: { t: 10, b: 10, l: 10, r: 10 },
+    font: { color: '#e6edf3' }
+  };
+
+  Plotly.react('map', [trace], layout, {responsive: true, displayModeBar: false});
+}
+
+updateMap();
+</script>
+</body>
+</html>

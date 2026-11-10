@@ -8,6 +8,8 @@
 ![Folium](https://img.shields.io/badge/Folium-Maps-77B829)
 ![Data](https://img.shields.io/badge/Data-CDC%20PLACES%202024-005EA2)
 
+[![View Interactive Map](https://img.shields.io/badge/🗺️%20View%20Interactive%20Map-Live-brightgreen?style=for-the-badge)](https://venubandi.github.io/cdc-chronic-health-risk/)
+
 > A two-phase machine learning pipeline that predicts chronic disease prevalence across U.S. census tracts, builds a neural-network-powered Chronic Health Risk Index (CHRI), and maps community-level health burden nationwide.
 
 ---
@@ -48,6 +50,14 @@ CDC PLACES 2024 Dataset (~73,000 census tracts)
   │  • Folium interactive U.S. map          │
   └─────────────────────────────────────────┘
 ```
+
+---
+
+## Interactive Map
+
+> **[Launch Interactive U.S. Disease Risk Map →](https://venubandi.github.io/cdc-chronic-health-risk/)**
+
+Switch between 6 disease metrics. Hover any state to see full prevalence breakdown.
 
 ---
 

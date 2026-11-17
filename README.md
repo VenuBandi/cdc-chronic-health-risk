@@ -52,6 +52,9 @@ This study uses **CDC PLACES 2024**, a 78,445-tract dataset of model-based chron
 | Cancer state-holdout R² | 0.9454 |
 | Best model (COPD) R² | 0.9664 |
 
+![CHRI USA Map](reports/images/chri_usa_map.png)
+*Figure 1. CHRI scores aggregated to county level across the contiguous US. Deep red = highest chronic disease burden (Deep South, Appalachia). Source: CDC PLACES 2024, 78,445 tracts.*
+
 ---
 
 ## 2. Phase 1 — Dataset Baseline & Audit
@@ -187,6 +190,9 @@ Pipeline steps:
 
 > All 10 models validated on 10 fully withheld states — no data leakage confirmed by temporal predictor audit.
 
+![R² Comparison](reports/images/eval_r2_comparison.png)
+*Figure 2. State-holdout R² across all 10 diseases. COPD and Stroke achieve R²>0.96. Cancer R²=0.945 is 4th best.*
+
 ---
 
 ## 6. SHAP Explainability — Disease Drivers
@@ -203,6 +209,12 @@ Cancer's SHAP profile is structurally different from cardiometabolic diseases:
 - **Cancer**: driven more by **preventive care access** (mammography, colonoscopy rates) and **social isolation** — not metabolic risk factors
 
 This explains why cancer follows a separate geographic axis (PC2) and why standard SES-based tools systematically miss high-cancer communities.
+
+![SHAP Heatmap](reports/images/shap_importance_heatmap.png)
+*Figure 3. SHAP importance heatmap across all diseases and predictors. Physical health days and general health dominate cardiometabolic diseases. Cancer's profile is structurally distinct.*
+
+![SHAP CHD](reports/images/shap_summary_chd.png)
+*Figure 4. SHAP summary for Coronary Heart Disease — representative of the cardiometabolic cluster pattern.*
 
 ---
 
@@ -231,6 +243,12 @@ CHRI synthesizes all 10 disease measures into a single 0–100 score per census 
 
 > Cancer's PC2 loading (0.610) and low KMO (0.595) confirm it follows a geographically distinct pattern. PC1 is a **cardiometabolic burden index**; PC2 is a **Cancer geography axis**.
 
+![PCA Loadings](reports/images/chri_pca_loadings.png)
+*Figure 5. PC1 loadings for all 10 diseases. Cardiometabolic diseases load uniformly (0.288–0.351). Cancer loads weakly on PC1 (0.189) but strongly on PC2 (0.610).*
+
+![CHRI Distribution](reports/images/chri_distribution_tiers.png)
+*Figure 6. CHRI score distribution across 78,445 census tracts with Low / Medium / High tercile boundaries.*
+
 ---
 
 ## 8. PCA Diagnostics
@@ -257,6 +275,9 @@ CHRI synthesizes all 10 disease measures into a single 0–100 score per census 
 
 Strong positive spatial autocorrelation confirms high-burden tracts cluster geographically. Standard regression is inappropriate for downstream analyses using CHRI — spatial lag or spatial error models are required.
 
+![Geographic Error](reports/images/geographic_error_obesity_vs_stroke.png)
+*Figure 7. Geographic prediction error for Obesity vs Stroke. Largest errors cluster in the Deep South (Stroke) and rural Appalachia (Obesity).*
+
 ---
 
 ## 10. External Validation — Life Expectancy
@@ -270,6 +291,9 @@ CHRI validated against **USALEEP** tract-level life expectancy (independent data
 | Life expectancy — High CHRI tier | 75.8 years |
 | Life expectancy — Low CHRI tier | 80.1 years |
 | **Tier gradient** | **4.3 years** |
+
+![LE Validation](reports/images/chri_life_expectancy_validation.png)
+*Figure 8. CHRI vs tract-level life expectancy (USALEEP; n=53,003; r=−0.471). High-burden tracts have 4.3 fewer life-years.*
 
 ---
 
@@ -304,6 +328,9 @@ High-burden tracts are on average **6.9 years older**, but age explains only 18%
 - Predominantly older, non-impoverished communities in a blind spot of standard resource allocation
 
 > These communities are identifiable only through disease-specific prediction models — standard SES-based tools systematically miss them.
+
+![SVI Divergence](reports/images/svi_chri_divergence.png)
+*Figure 9. SVI vs CHRI tier divergence. The ~760 "SVI-low / CHRI-high" tracts (upper-left quadrant) are missed by standard public health tools.*
 
 **Hypothesis H5 confirmed.**
 

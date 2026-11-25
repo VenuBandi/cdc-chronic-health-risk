@@ -1,0 +1,115 @@
+=================================================================
+PHASE 1 ANALYSES — CDC PLACES CHRI
+=================================================================
+
+Loading divergence data...
+  Tracts in divergence file: 76,895
+
+─────────────────────────────────────────────────────────────────
+ANALYSIS 1 — 760-Tract Threshold Sensitivity
+─────────────────────────────────────────────────────────────────
+Varying SVI 'low' threshold × CHRI 'high' threshold.
+Original: SVI_pct <= 0.20, CHRI_pct >= 0.80
+
+  SVI ≤ 20%  ×  CHRI ≥ 75%  →  1,117 tracts  (~4.5M people)
+  SVI ≤ 20%  ×  CHRI ≥ 80%  →    760 tracts  (~3.0M people)
+  SVI ≤ 20%  ×  CHRI ≥ 85%  →    457 tracts  (~1.8M people)
+  SVI ≤ 25%  ×  CHRI ≥ 75%  →  1,662 tracts  (~6.6M people)
+  SVI ≤ 25%  ×  CHRI ≥ 80%  →  1,115 tracts  (~4.5M people)
+  SVI ≤ 25%  ×  CHRI ≥ 85%  →    665 tracts  (~2.7M people)
+  SVI ≤ 33%  ×  CHRI ≥ 75%  →  2,769 tracts  (~11.1M people)
+  SVI ≤ 33%  ×  CHRI ≥ 80%  →  1,907 tracts  (~7.6M people)
+  SVI ≤ 33%  ×  CHRI ≥ 85%  →  1,139 tracts  (~4.6M people)
+
+  Original count (<=20th / >=80th): 760 tracts
+  Range across all 9 cells: 457 – 2,769 tracts
+  CAUTION: Count varies >2.5×. Headline number needs qualification.
+
+  → Saved: phase1_sensitivity_table.csv
+
+─────────────────────────────────────────────────────────────────
+ANALYSIS 2 — Subgroup Life Expectancy Correlation
+─────────────────────────────────────────────────────────────────
+  USALEEP not found locally — attempting download...
+  Downloading USALEEP from CDC NCHS...
+  Downloaded: 67,148 rows → /Users/venubandi/Desktop/cdc places research/outputs/usaleep_tract_le.csv
+  Usable LE tracts: 67,148
+  Merged tracts (CHRI + LE): 52,951
+
+  Overall: r(CHRI_pct, LE) = -0.464  (p=0.00e+00)  n=52,951
+  SVI-low/CHRI-high subgroup: r = 0.027  (p=6.09e-01)  n=375
+  CAUTION: Weak correlation in divergent subgroup — qualify the 'missed' claim.
+
+  Mean life expectancy by divergence class:
+    Both high                 73.0 yrs  (n=4,012)
+    Both low                  81.6 yrs  (n=2,222)
+    Middle                    78.5 yrs  (n=45,253)
+    SVI high / CHRI low       78.4 yrs  (n=1,089)
+    SVI low / CHRI high       79.5 yrs  (n=375)
+
+  → Saved: phase1_subgroup_le_correlation.csv
+
+─────────────────────────────────────────────────────────────────
+ANALYSIS 3 — Age Test on 760-Tract Finding
+─────────────────────────────────────────────────────────────────
+Does the SVI-low/CHRI-high finding appear even in younger tracts?
+(Rebuts: 'CHRI just identifies aging communities')
+
+  Median age data: 84,494 tracts
+  Merged (CHRI + age): 76,894 tracts
+  National median tract age: 39.4 years
+  SVI-low/CHRI-high tracts in merged dataset: 760
+  Divergent tracts in BELOW-median-age communities: 25 (3.3% of total)
+
+  Median age in ALL tracts: 39.4 yrs
+  Median age in SVI-low/CHRI-high tracts: 56.2 yrs
+  Divergent tracts are +16.8 yrs older than average
+
+  MODERATE: 25 divergent tracts in young communities.
+  Finding is real but age is a contributing factor. Disclose both.
+
+  → Saved: phase1_age_test.csv
+
+─────────────────────────────────────────────────────────────────
+ANALYSIS 4 — Characterize 5,077 Missing Tracts
+─────────────────────────────────────────────────────────────────
+Are excluded tracts systematically different from included tracts?
+(Non-random missingness = undercount of true gap)
+
+  Total PLACES tracts: 83,522
+  In divergence file (included): 76,895
+  Missing / excluded: 6,627 (7.9%)
+
+  Comparing included vs excluded tracts on 11 indicators:
+  Column                          Included mean  Excluded mean   Diff %
+  ────────────────────────────── ────────────── ────────────── ────────
+  TotalPopulation                       3958.63        4081.21    +3.1% **
+  TotalPop18plus                        3073.25        3323.21    +8.1% ***
+  PHLTH_CrudePrev                         13.67          13.98    +2.2% ***
+  DEPRESSION_CrudePrev                    22.63          20.48    -9.5% ***
+  ARTHRITIS_CrudePrev                     27.22          27.34    +0.4% *
+  DIABETES_CrudePrev                      12.41          12.63    +1.8% ***
+  OBESITY_CrudePrev                       34.62          32.28    -6.7% ***
+  BPHIGH_CrudePrev                        33.90          28.30   -16.5% ***
+  ACCESS2_CrudePrev                       11.13          15.49   +39.1% ***
+  TEETHLOST_CrudePrev                     13.97          14.31    +2.4% 
+  LPA_CrudePrev                           25.30          26.28    +3.8% ***
+
+  Median adult population:
+    Included tracts: 2,945
+    Excluded tracts: 3,140
+  → Population size is similar; missingness may not be rural-concentrated.
+
+  Top states by missing tract count:
+    FL: 5,077 missing tracts
+    CT: 876 missing tracts
+    NY: 82 missing tracts
+    CA: 81 missing tracts
+    TX: 51 missing tracts
+    MI: 35 missing tracts
+    PA: 32 missing tracts
+    VA: 24 missing tracts
+    IL: 23 missing tracts
+    OH: 23 missing tracts
+
+  → Saved: phase1_missing_tracts.csv

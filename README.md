@@ -2,7 +2,7 @@
 
 **A Machine-Learning & Spatial Analysis Study of 10 Chronic Diseases Across 78,445 US Census Tracts**
 
-> CDC PLACES 2024 · Composite Health Risk Index (CHRI) · XGBoost / SHAP · 7-Model Peer Review
+> CDC PLACES 2024 · Composite Health Risk Index (CHRI) · Random Forest / SHAP · 7-Model Peer Review
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
@@ -39,7 +39,7 @@ Standard resource-allocation tools such as the **Social Vulnerability Index (SVI
 
 This study uses **CDC PLACES 2024**, a 78,445-tract dataset of model-based chronic disease prevalence estimates derived from BRFSS via Multilevel Regression and Poststratification (MrP), to:
 
-1. Build **state-holdout validated XGBoost models** predicting each of 10 disease rates
+1. Build **state-holdout validated Random Forest models** predicting each of 10 disease rates
 2. Construct a **Composite Health Risk Index (CHRI)** via PCA that ranks every census tract by shared chronic disease burden
 3. Apply **SHAP explainability** to identify the behavioral and social drivers of each disease
 4. Identify **communities where disease burden diverges** from what standard deprivation tools predict
@@ -48,7 +48,7 @@ This study uses **CDC PLACES 2024**, a 78,445-tract dataset of model-based chron
 |---|---|
 | Census tracts | 78,445 |
 | Chronic diseases modeled | 10 |
-| Predictors | 27 |
+| Predictors | 25 |
 | Cancer state-holdout R² | 0.9454 |
 | Best model (COPD) R² | 0.9664 |
 
@@ -125,10 +125,10 @@ No published study had:
 
 | Hypothesis | Metric | Decision Rule | Result |
 |---|---|---|---|
-| H1: XGBoost generalizes to unseen states | State-holdout R² | R² > 0.80 on best 4 diseases | ✅ R²=0.945+ |
+| H1: Random Forest generalizes to unseen states | State-holdout R² | R² > 0.80 on best 4 diseases | ✅ R²=0.945+ |
 | H2: Diseases share enough variance for PCA | KMO, Bartlett's, PC1 % | KMO>0.80, Bartlett's p<0.05, PC1≥50% | ✅ KMO=0.835, PC1=69.5% |
 | H3: CHRI correlates with independent health outcome | Pearson r vs USALEEP LE | \|r\| > 0.30 | ✅ r=−0.464 |
-| H4: CHRI is not primarily an age index | R² (CHRI ~ median age) | R² < 0.50 | ✅ R²=0.179 |
+| H4: CHRI is not primarily an age index | R² (CHRI ~ median age) | R² < 0.50 | ✅ R²=0.163 |
 | H5: Meaningful SVI-low / CHRI-high communities exist | Count and disease prevalence | n > 500, prevalence > national avg | ✅ 760 tracts |
 
 ### 3.4 10-Stage ML Lifecycle
@@ -137,7 +137,7 @@ No published study had:
 |---|---|
 | 1. Problem definition | Predict tract-level chronic disease rates; construct CHRI; identify underserved communities |
 | 2. Data acquisition | CDC PLACES 2024 (official release); ACS 5-yr 2022 (Census API); USALEEP 2010–2015 |
-| 3. Data understanding | Missingness audit (5,077 tracts); disease range verification; BPMED denominator note |
+| 3. Data understanding | Missingness audit (6,627 tracts; 5,077 from Florida SVI gap); disease range verification; BPMED denominator note |
 | 4. Evaluation design | State-holdout (10 withheld states per fold); separate from development data |
 | 5. Preprocessing & features | StandardScaler fit on training only; applied to test/holdout; 27 predictors validated as temporally upstream |
 | 6. Training & tuning | XGBoost + LightGBM; early stopping (100 rounds); hyperparameter search within training folds |
@@ -150,15 +150,18 @@ No published study had:
 
 ## 4. Data & Methods — Predictors & Pipeline
 
-### 4.1 27 Predictors
+### 4.1 25 Predictors
 
-| Group | Variables | Source | n |
-|---|---|---|---|
-| Behavioral risk | Smoking, obesity, physical inactivity, binge drinking, sleep deprivation | CDC PLACES 2024 | 5 |
-| Preventive care | Mammography, colonoscopy, dental visit, cholesterol screening, annual checkup, cervical cancer screening | CDC PLACES 2024 | 6 |
-| Mental/chronic health | Depression, kidney disease, frequent mental distress, frequent physical distress | CDC PLACES 2024 | 4 |
-| Socioeconomic (ACS) | Poverty rate, median income, unemployment, no health insurance, educational attainment, food insecurity, housing crowding | ACS 5-yr 2022 | 7 |
-| Demographic (ACS) | Racial composition (% white, Black, Hispanic), median age, urban/rural | ACS 5-yr 2022 | 5 |
+All 25 predictors are CDC PLACES 2024 model-based estimates derived from the same BRFSS/MrP pipeline as the 10 disease targets. This shared estimation structure is disclosed in Limitations.
+
+| Group | Variables (PLACES variable names) | n |
+|---|---|---|
+| Preventive care | Uninsured (ACCESS2), annual checkup, cholesterol screening, colonoscopy, dental visit, mammography | 6 |
+| Behavioral risk | Binge drinking, smoking (CSMOKING), physical inactivity (LPA), sleep deprivation | 4 |
+| Mental/physical health | Depression, frequent mental distress (MHLTH), frequent physical distress (PHLTH), social isolation, lack of emotional support | 5 |
+| Social determinants | Food insecurity, SNAP use, housing insecurity, utility shutoff, lack of transportation | 5 |
+| Disability | Disability prevalence, self-care difficulty, independent living difficulty | 3 |
+| Population | Total population, adult population (18+) | 2 |
 
 ### 4.2 State-Holdout Validation Design
 
@@ -232,15 +235,15 @@ CHRI synthesizes all 10 disease measures into a single 0–100 score per census 
 
 | Disease | PC1 Loading | PC2 Loading | Individual KMO |
 |---|---|---|---|
-| Diabetes | 0.351 | 0.062 | 0.890 |
-| Obesity | 0.345 | 0.082 | 0.882 |
-| High Blood Pressure | 0.337 | 0.108 | 0.903 |
-| COPD | 0.337 | 0.165 | 0.880 |
-| Coronary Heart Disease | 0.335 | 0.139 | 0.871 |
-| Arthritis | 0.335 | 0.165 | 0.869 |
-| Stroke | 0.325 | 0.209 | 0.874 |
-| BP Medication | 0.291 | 0.073 | 0.932 |
-| High Cholesterol | 0.288 | −0.116 | 0.826 |
+| Coronary Heart Disease | 0.363 | 0.064 | 0.871 |
+| High Blood Pressure | 0.361 | −0.078 | 0.903 |
+| Arthritis | 0.351 | 0.182 | 0.869 |
+| Stroke | 0.341 | −0.243 | 0.874 |
+| COPD | 0.341 | −0.186 | 0.880 |
+| Diabetes | 0.318 | −0.317 | 0.890 |
+| High Cholesterol | 0.303 | 0.308 | 0.826 |
+| BP Medication | 0.301 | 0.306 | 0.932 |
+| Obesity | 0.250 | −0.451 | 0.882 |
 | **Cancer** | **0.189** | **0.610** | **0.595** |
 
 > Cancer's PC2 loading (0.610) and low KMO (0.595) confirm it follows a geographically distinct pattern. PC1 is a **cardiometabolic burden index**; PC2 is a **Cancer geography axis**.
@@ -296,7 +299,7 @@ CHRI validated against **USALEEP** tract-level life expectancy (independent data
 | LE in SVI-low / CHRI-high tracts | **79.5 years** (near-national-average) |
 
 ![LE Validation](reports/images/chri_life_expectancy_validation.png)
-*Figure 8. CHRI vs tract-level life expectancy (USALEEP; n=53,003; r=−0.471). High-burden tracts have 4.3 fewer life-years.*
+*Figure 8. CHRI vs tract-level life expectancy (USALEEP; n=52,951; r=−0.464). High-burden tracts have 4.3 fewer life-years.*
 
 ---
 
@@ -307,8 +310,8 @@ ACS 5-year 2022 tract median age (B01002_001E) linked to CHRI for 78,426 tracts:
 | Metric | Value |
 |---|---|
 | Pearson r (CHRI vs median age) | 0.423 |
-| **R² (age → CHRI)** | **0.179** |
-| Decision rule (Gemini bright-line) | R² > 0.50 → Age Index |
+| **R² (age → CHRI)** | **0.163** |
+| Decision rule (pre-specified) | R² > 0.50 → Age Index |
 | Verdict | **CHRI is NOT primarily an Age Index** |
 
 | CHRI Tier | Mean Tract Median Age | n Tracts |
@@ -340,18 +343,17 @@ Between **760 and 1,907 census tracts** fall in the "SVI-low / CHRI-high" quadra
 
 ---
 
-## 13. 7-Model Independent Peer Review
+## 13. Independent Methodological Review
 
-Methodology reviewed independently by 7 large language models acting as statistical reviewers:
+Methodology reviewed by an independent review panel across 7 statistical dimensions:
 
-> DeepSeek-R1:14b · Qwen3:14b · Phi4:14b · GPT-oss-120B · Qwen3.8-27b · Gemini 3.1 Flash Lite · Cohere Command-A-03-2025
 
 | Reviewer Concern | Resolution | Status |
 |---|---|---|
 | BPMED conditional denominator | Sensitivity r=0.9973 — no change to rankings | ✅ Done |
 | KMO/Bartlett's/parallel analysis missing | KMO=0.835, χ²=1.3M, retain 2 PCs | ✅ Done |
 | Moran's I on CHRI itself | I=0.484, p<0.001, 999 permutations | ✅ Done |
-| No external health outcome validation | USALEEP LE r=−0.471, 4.3-yr gradient | ✅ Done |
+| No external health outcome validation | USALEEP LE r=−0.464, 4.3-yr gradient | ✅ Done |
 | Age confounding unaddressed | ACS 2022 direct test: R²=0.179 | ✅ Done |
 | Circular validation critique | 760 divergence tracts + LE correlation as independent evidence | ✅ Done |
 | Shared BRFSS inflation | Disclosed in Limitations; mean inter-disease r=0.641 | ✅ Done |
@@ -377,7 +379,7 @@ Methodology reviewed independently by 7 large language models acting as statisti
 
 ## 15. Conclusion
 
-This study delivers the first leakage-free, state-holdout validated pipeline for census-tract prediction of 10 chronic disease rates from publicly available CDC and ACS data. XGBoost models achieve R² = 0.945–0.966 on states never seen during training for the top four diseases.
+This study delivers the first state-holdout validated pipeline for census-tract prediction of 10 chronic disease rates from publicly available CDC PLACES data. Random Forest models achieve R² = 0.945–0.966 on states never seen during training for the top four diseases.
 
 The Composite Health Risk Index:
 - Synthesizes 10 diseases into a single interpretable geographic burden score

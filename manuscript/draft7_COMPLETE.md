@@ -4,16 +4,6 @@
 **Status: Complete draft — all reviewer recommendations implemented**
 
 ---
-## REVIEWER CHANGES TRACKER
-| Critique | Location | Status |
-|---|---|---|
-| C1: "What models add" | Discussion §4.4 | ✅ Implemented |
-| C2: SHAP causal language | Methods §2.2 + Results §3.1 | ✅ Implemented |
-| C3: BRFSS co-estimation | Methods §2.1 | ✅ Implemented |
-| C4: Cancer screening interpretation | Discussion §4.3 | ✅ Implemented |
-| C5: Cancer heterogeneity | Results §3.2 + Discussion §4.3 | ✅ Implemented |
-| C6: 760-tract framing → pre-mortality-peak | Abstract + Intro + Results + Discussion | ✅ Implemented |
----
 
 ## Abstract
 
@@ -21,7 +11,7 @@
 
 **Objective.** To identify US census tracts carrying elevated chronic disease burden not flagged by SVI, characterize their demographic profile, and assess whether elevated burden precedes detectable mortality-stage outcomes in these communities.
 
-**Methods.** Using CDC PLACES 2024 small-area prevalence estimates for 10 chronic diseases across 78,445 US census tracts, we trained state-holdout cross-validated XGBoost models predicting each disease rate from 25 sociodemographic and behavioral predictors. We derived a Composite Health Risk Index (CHRI) using principal component analysis (PCA) on the 10-disease matrix and validated it externally against census-tract life expectancy data (USALEEP). SHAP explainability analysis identified geographic correlates of modeled disease rates by disease domain.
+**Methods.** Using CDC PLACES 2024 small-area prevalence estimates for 10 chronic diseases across 78,445 US census tracts, we trained state-holdout cross-validated Random Forest models predicting each disease rate from 25 behavioral, preventive care, and social determinant predictors drawn from CDC PLACES. We derived a Composite Health Risk Index (CHRI) using principal component analysis (PCA) on the 10-disease matrix and validated it externally against census-tract life expectancy data (USALEEP). SHAP explainability analysis identified geographic correlates of modeled disease rates by disease domain.
 
 **Results.** CHRI was inversely correlated with life expectancy across all tracts (r = −0.464, p < 0.001), with a 4.3-year gradient across burden tiers. Between 760 and 1,907 census tracts — depending on threshold definition — were classified as low-SVI but high-CHRI. These communities had a median tract age of 56.2 years (16.8 years above the national median) and near-average life expectancy (79.5 years), indicating elevated disease burden has not yet translated into excess mortality. Cancer geography was structurally distinct from cardiometabolic burden, predicting along a separate geographic dimension associated with preventive care screening utilization rates.
 
@@ -33,7 +23,7 @@
 
 Chronic diseases — including coronary heart disease, stroke, diabetes, COPD, and cancer — account for seven in ten deaths in the United States and consume more than 75% of the nation's $4.1 trillion annual healthcare expenditure [CITE: CDC chronic disease overview]. Geographic targeting of chronic disease prevention resources relies heavily on the Social Vulnerability Index (SVI), a CDC composite measure of 15 socioeconomic and housing variables originally developed for disaster preparedness and emergency response [CITE: Flanagan 2011]. Because SVI quantifies socioeconomic deprivation rather than actual disease burden, it systematically overlooks communities where chronic disease prevalence is elevated despite favorable socioeconomic profiles — particularly aging suburban and rural communities where cardiometabolic conditions accumulate in the absence of acute poverty. Prior work has demonstrated that socioeconomic deprivation indices and direct chronic disease burden measures diverge substantially at the census-tract level [CITE: prior SVI-burden divergence paper], yet no published tool directly quantifies this gap at national scale using tract-level disease data.
 
-Accurate census-tract-level prediction of chronic disease rates is the methodological foundation required to build such a tool. Prior studies have predicted individual disease rates at the county or city level using machine learning [CITE: Jiao & Feng 2021], but no study had validated tract-level predictions across all 10 CDC PLACES chronic disease outcomes simultaneously at the national scale, nor tested whether geographic patterns learned in one set of states transfer to states entirely withheld from training. In Phase 1 of this study, we address this gap by training state-holdout cross-validated XGBoost models predicting each of 10 chronic disease rates from 25 sociodemographic and behavioral predictors across 78,445 US census tracts. We apply SHAP explainability analysis to characterize the geographic correlates of predicted disease rates by disease domain — distinguishing the community-level factors associated with cardiometabolic burden from those associated with cancer geography, which follows a structurally distinct geographic pattern.
+Accurate census-tract-level prediction of chronic disease rates is the methodological foundation required to build such a tool. Prior studies have predicted individual disease rates at the county or city level using machine learning [CITE: Jiao & Feng 2021], but no study had validated tract-level predictions across all 10 CDC PLACES chronic disease outcomes simultaneously at the national scale, nor tested whether geographic patterns learned in one set of states transfer to states entirely withheld from training. In Phase 1 of this study, we address this gap by training state-holdout cross-validated Random Forest models predicting each of 10 chronic disease rates from 25 behavioral, preventive care, and social determinant predictors across 78,445 US census tracts. We apply SHAP explainability analysis to characterize the geographic correlates of predicted disease rates by disease domain — distinguishing the community-level factors associated with cardiometabolic burden from those associated with cancer geography, which follows a structurally distinct geographic pattern.
 
 In Phase 2, we use the 10 validated disease predictions to construct a Composite Health Risk Index (CHRI) — a single census-tract-level score that ranks communities by shared chronic disease burden, independent of socioeconomic proxies. CHRI is derived via principal component analysis (PCA) on the 10-disease matrix, externally validated against independent census-tract life expectancy data, and directly compared to the SVI to identify divergent communities. We find that between 760 and 1,907 census tracts — depending on threshold definition — carry elevated CHRI scores despite low SVI rankings. These communities are characterized by above-average aging (median tract age 56.2 years, 16.8 years above the national median) and near-average life expectancy (79.5 years), indicating that accumulated chronic disease burden has not yet translated into excess mortality. This pre-mortality-peak profile represents the precise intervention window in which preventive resource allocation is most effective — communities that standard SES-based tools cannot identify and that CHRI is designed to surface.
 
@@ -56,11 +46,11 @@ The 25 predictors used in Phase 1 derive from two structurally distinct sources.
 
 ### 2.2 Phase 1 — Geographic Disease Prediction
 
-**Predictors.** Twenty-five predictors were selected across five domains: behavioral risk factors (smoking, physical inactivity, binge drinking, sleep deprivation; n=4), preventive care utilization (mammography, colonoscopy, dental visit, cholesterol screening, annual checkup, cervical cancer screening; n=6), mental and chronic health status (depression, kidney disease, frequent mental distress, frequent physical distress; n=4), socioeconomic factors from ACS (poverty, income, unemployment, uninsured, education, food insecurity, housing crowding; n=7), and demographic characteristics from ACS (age composition, racial/ethnic composition, urban/rural; n=4).
+**Predictors.** Twenty-five predictors were drawn entirely from CDC PLACES 2024 model-based estimates across six domains: preventive care utilization (uninsured rate, annual checkup, cholesterol screening, colonoscopy, dental visit, mammography; n=6); behavioral risk factors (binge drinking, smoking, physical inactivity, sleep deprivation; n=4); mental and physical health status (depression, frequent mental distress, frequent physical distress, social isolation, lack of emotional support; n=5); social determinants of health (food insecurity, SNAP use, housing insecurity, utility shutoff, lack of transportation; n=5); disability and functional limitations (disability prevalence, self-care difficulty, independent living difficulty; n=3); and population size (total population, adult population 18+; n=2). All 25 predictors are BRFSS/MrP model-based estimates generated through the same CDC PLACES pipeline as the 10 disease targets; the shared estimation structure is disclosed in the BRFSS Co-Estimation section and in Limitations.
 
 **Target Variables.** Ten chronic disease crude prevalence rates from CDC PLACES 2024 were modeled as separate regression targets: Stroke, Coronary Heart Disease (CHD), COPD, Cancer (all invasive types excluding non-melanoma skin), Diabetes, Arthritis, Obesity, High Blood Pressure (BPHIGH), High Cholesterol (HIGHCHOL), and BP Medication Use (BPMED).
 
-**Modeling Pipeline.** To prevent data leakage, all preprocessing was performed within a scikit-learn Pipeline object. The pipeline applied median imputation followed by StandardScaler normalization, fitted exclusively on training data and applied to test and holdout data at inference time. XGBoost (version ≥1.6) models were trained for each disease target with early stopping (100 rounds) to prevent overfitting.
+**Modeling Pipeline.** A Random Forest Regressor was trained for each of the 10 disease targets using GridSearchCV (3-fold CV, R² scoring) to select hyperparameters (n_estimators, max_depth, min_samples_split, min_samples_leaf, max_features). StandardScaler normalization was applied to all predictors prior to model fitting. Random Forest was selected as the primary model over Gradient Boosting due to superior interpretability, stable feature importance rankings, and alignment with epidemiological literature (see Supplementary Note).
 
 **State-Holdout Validation.** For each disease, 10 states were randomly selected (random seed = 42) and fully withheld from model training and hyperparameter selection. Final models were evaluated on these 10 withheld states, which the model had never seen during development. Bootstrap confidence intervals (200 resamples) were computed on state-holdout MAE and R².
 
@@ -86,7 +76,7 @@ The 25 predictors used in Phase 1 derive from two structurally distinct sources.
 
 ### 3.1 Phase 1 — Geographic Disease Prediction
 
-**Model Performance.** State-holdout cross-validated XGBoost models achieved strong predictive performance across all 10 disease outcomes.
+**Model Performance.** State-holdout cross-validated Random Forest models achieved strong predictive performance across all 10 disease outcomes.
 
 | Disease | R² (State-Holdout) | 95% CI | MAE (pp) |
 |---|---|---|---|

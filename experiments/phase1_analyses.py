@@ -47,7 +47,7 @@ def save_checkpoint(state: dict):
     existing.update(_jsonify(state))
     with open(CHECKPOINT_FILE, "w") as f:
         json.dump(existing, f, indent=2)
-    print(f"  ✓ Checkpoint saved: {list(state.keys())}")
+    print(f"  Checkpoint saved: {list(state.keys())}")
 
 checkpoint = load_checkpoint()
 if checkpoint:
